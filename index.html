@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TVA – Audio Waveform</title>
+  <style>
+    body {
+      background: #0f0f0f;
+      color: green;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: sans-serif;
+    }
+
+    canvas {
+      border: 1px solid #333;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="waveform" width="800" height="300"></canvas>
+  <button id="playBtn">Play</button>
+
+  <audio id="audio" src="audio.mp3"></audio>
+
+  <script src="script.js"></script>
+</body>
+</html>
