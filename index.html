@@ -16,24 +16,37 @@
     }
 
     canvas {
-      border: 1px solid #333;
+      border: 5px dotted #333;
     }
 
-    button {
+    #playbtn  {
       margin-top: 20px;
       padding: 10px 20px;
       font-size: 16px;
       cursor: pointer;
+      border: 2px sokid grey;
+      border-radius: 8px;
+    }
+
+    #pausebtn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border: 2px solid grey;
+      border-radius: 8px;
+
     }
   </style>
 </head>
 <body>
 
-  <canvas id="waveform" width="800" height="300"></canvas>
-  <button id="playBtn">Play</button>
+  <canvas id="waveform" width="300" height="8sc00"></canvas>
+  <button id="playbtn">Start</button>
+  <button id="pausebtn">Pause</button>  
 
   <audio id="audio" src="audio.mp3"></audio>
 
   <script src="script.js"></script>
 </body>
-</html>
+</html> 
