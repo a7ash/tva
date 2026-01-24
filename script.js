@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
         source = audioContext.createMediaElementSource(audio);
         analyser = audioContext.createAnalyser();
   
-        analyser.fftSize = 128;
+        analyser.fftSize = 512;
         const bufferLength = analyser.frequencyBinCount;
   
         dataArray = new Uint8Array(bufferLength);
@@ -59,12 +59,12 @@ document.addEventListener("DOMContentLoaded", () => {
   
       // smoothing (low-pass filter)
       for (let i = 0; i < dataArray.length; i++) {
-        smoothData[i] += (dataArray[i] - smoothData[i]) * 0.5;
+        smoothData[i] += (dataArray[i] - smoothData[i]) * 1;
       }
   
       // motion blur clear
       ctx.shadowBlur = 0;
-      ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+      ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
   
       // waveform style
@@ -79,8 +79,10 @@ document.addEventListener("DOMContentLoaded", () => {
       let x = 0;
   
       for (let i = 0; i < smoothData.length; i++) {
-        const v = smoothData[i] / 128.0;
-        const y = (v - 1) * (canvas.height / 2)*1.6 + canvas.height / 2;
+        const v = smoothData[i] / 128;
+        const centerY = canvas.height / 2;
+        const amplitude = 1.2; // tweak this
+        const y = centerY + (v - 1) * centerY * amplitude;
         
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
