@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
         source = audioContext.createMediaElementSource(audio);
         analyser = audioContext.createAnalyser();
   
-        analyser.fftSize = 512;
+        analyser.fftSize = 1024;
         const bufferLength = analyser.frequencyBinCount;
   
         dataArray = new Uint8Array(bufferLength);
@@ -59,7 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
   
       // smoothing (low-pass filter)
       for (let i = 0; i < dataArray.length; i++) {
-        smoothData[i] += (dataArray[i] - smoothData[i]) * 1;
+        smoothData[i] += (dataArray[i] - smoothData[i]) * 0.25;
       }
   
       // motion blur clear
@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
       for (let i = 0; i < smoothData.length; i++) {
         const v = smoothData[i] / 128;
         const centerY = canvas.height / 2;
-        const amplitude = 1.2; // tweak this
+        const amplitude = 1.6; // tweak this
         const y = centerY + (v - 1) * centerY * amplitude;
         
         if (i === 0) ctx.moveTo(x, y);
