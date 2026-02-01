@@ -15,6 +15,11 @@ document.addEventListener("DOMContentLoaded", () => {
   let smoothData;
   let source;
   let isPlaying = false;
+  let smoothGain = 1;
+  let audioCtx;
+  let bufferLength;
+  let souceNode; 
+  
 
   playbtn.addEventListener("click", () => {
     if (!audioContext) {
@@ -23,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
       source = audioContext.createMediaElementSource(audio);
       analyser = audioContext.createAnalyser();
 
-      analyser.fftSize = 1024;
+      analyser.fftSize = 128;
       const bufferLength = analyser.frequencyBinCount;
 
       dataArray = new Uint8Array(bufferLength);
@@ -57,9 +62,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
     analyser.getByteTimeDomainData(dataArray);
 
+    // --- AUTO GAIN ---
+let maxDev = 0;
+for (let i = 0; i < smoothData.length; i++) {
+  const v = smoothData[i] / 128 - 1;   // [-1, +1]
+  const d = Math.abs(v);
+  if (d > maxDev) maxDev = d;
+}
+
+// target how much of the screen height we want to use
+const target = 0.8; // 80% of half-height
+let autoGain = target / (maxDev + 0.0001); // avoid divide by zero
+
+// clamp so it doesn't go crazy
+autoGain = Math.max(0.5, Math.min(autoGain, 3.0));
+
+// smooth the gain (so it doesn't jump)
+smoothGain += (autoGain - smoothGain) * 0.1; // 0.05 = slower, 0.2 = faster
+
     // smoothing (low-pass filter)
     for (let i = 0; i < dataArray.length; i++) {
-      smoothData[i] += (dataArray[i] - smoothData[i]) * 0.08;
+      smoothData[i] += (dataArray[i] - smoothData[i]) * 0.05;
     }
 
     // motion blur clear
@@ -70,26 +93,40 @@ document.addEventListener("DOMContentLoaded", () => {
     // waveform style
     ctx.lineWidth = 4;
     ctx.strokeStyle = "#36fffd";
-    ctx.shadowBlur = 20;
+    ctx.shadowBlur = 30;
     ctx.shadowColor = "#00ffcc";
 
-    ctx.beginPath();
+    const points = [];
+const sliceWidth = canvas.width / smoothData.length;
 
-    const sliceWidth = canvas.width / smoothData.length;
-    let x = 0;
+for (let i = 0; i < smoothData.length; i++) {
+  const v = smoothData[i] / 128;
+  const centerY = canvas.height / 2;
+  const amplitude = 2; // 👈 change this number
+  const y = centerY + (v - 1) * centerY * amplitude * smoothGain;  const x = i * sliceWidth;
+  points.push({ x, y });
+}
 
-    for (let i = 0; i < smoothData.length; i++) {
-      const v = smoothData[i] / 128;
-      const centerY = canvas.height / 2;
-      const amplitude = 1.6; // tweak this
-      const y = centerY + (v - 1) * centerY * amplitude;
-      
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+ctx.beginPath();
+ctx.moveTo(points[0].x, points[0].y);
 
-      x += sliceWidth;
-    }
+const tension = 0.3;
 
-    ctx.stroke();
+for (let i = 0; i < points.length - 1; i++) {
+  const p0 = points[i - 1] || points[i];
+  const p1 = points[i];
+  const p2 = points[i + 1];
+  const p3 = points[i + 2] || p2;
+
+  const cp1x = p1.x + (p2.x - p0.x) * tension / 6;
+  const cp1y = p1.y + (p2.y - p0.y) * tension / 6;
+
+  const cp2x = p2.x - (p3.x - p1.x) * tension / 6;
+  const cp2y = p2.y - (p3.y - p1.y) * tension / 6;
+
+  ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+}
+
+ctx.stroke();
   }
 });
