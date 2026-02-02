@@ -6,13 +6,13 @@
   <style>
     body {
       background: #0f0f0f;
-      color: green;
+      color: whitesmoke;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
-      font-family: sans-serif;
+      height: 110vh;
+      font-family: sans; 
     }
 
     canvas {
@@ -42,20 +42,69 @@
       margin-top: 20px;
       padding: 10px 20px;
       font-size: 16px;
-      cursor: progress;
+      cursor: pointer;
       border: 2px solid grey;
       border-radius: 8px;
 
     }
 
+ .switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #444;
+  transition: 0.3s;
+  border-radius: 32px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 32px;
+  width: 32px;
+  left: 2px;
+  bottom: 1px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: grey;
+}
+
+input:checked + .slider:before {
+  transform: translateX(24px);
+}
+
   </style>
 </head>
 <body>
 
-  <canvas id="waveform" width="1440" height="600"></canvas>
+  <canvas id="waveform" width="1440" height="600"></canvas> 
   <button id="playbtn">Play </button>
   <button id="pausebtn">Pause</button>  
   <button id="startmic">Start Mic</button>
+  <div style="margin-top: 12px; display:flex; align-items:center; gap:10px;">
+    <label class="switch">
+      <input type="checkbox" id="normalizerToggle" checked>
+      <span class="slider"></span>
+    </label>
+    <span>Volume Normalizer</span>
+  </div>
 
   <audio id="audio" src="audio.mp3"></audio>
 
