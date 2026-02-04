@@ -9,54 +9,102 @@ document.addEventListener("DOMContentLoaded", () => {
   const playbtn = document.getElementById("playbtn");
   const pausebtn = document.getElementById("pausebtn");
   const micbtn = document.getElementById("startmic");
-  const normalizerToggle = document.getElementById("normalizerToggle");
+  const fileInput = document.getElementById("fileInput");
+
+  // CONTROLS
+  const modeToggle = document.getElementById("modeToggle");      // smooth / raw
+  const colorPicker = document.getElementById("colorPicker");    // color
+  const glowSlider = document.getElementById("glowSlider");      // glow
+  const autoColorToggle = document.getElementById("autoColorToggle"); // auto colour
 
   let audioContext;
   let analyser;
   let dataArray;
   let smoothData;
-  let source;
-  let micSource;
+  let source = null;
+  let micSource = null;
   let isPlaying = false;
-  let smoothGain = 1;
+  let currentInput = "file"; // "file" or "mic"
 
-  // ✅ NORMALIZER STATE (MOVED OUTSIDE DRAW)
-  let normalizerOn = true;
+  // default settings
+  let currentMode = "smooth";
+  let waveColor = "#36fffd";
+  let glowIntensity = 30;
+  let autoColor = false;
 
-  // ✅ TOGGLE LISTENER (ADD ONCE)
-  if (normalizerToggle) {
-    normalizerToggle.addEventListener("change", () => {
-      normalizerOn = normalizerToggle.checked;
+  // ---------- UI LISTENERS ----------
+
+  if (modeToggle) {
+    modeToggle.addEventListener("change", () => {
+      currentMode = modeToggle.checked ? "raw" : "smooth";
     });
   }
+
+  if (colorPicker) {
+    colorPicker.addEventListener("input", () => {
+      waveColor = colorPicker.value;
+    });
+  }
+
+  if (glowSlider) {
+    glowSlider.addEventListener("input", () => {
+      glowIntensity = parseFloat(glowSlider.value);
+    });
+    glowIntensity = parseFloat(glowSlider.value || 30);
+  }
+
+  if (autoColorToggle) {
+    autoColorToggle.addEventListener("change", () => {
+      autoColor = autoColorToggle.checked;
+    });
+  }
+
+  // ---------- FILE PICKER ----------
+
+  if (fileInput) {
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const url = URL.createObjectURL(file);
+      audio.src = url;
+      audio.load();
+
+      currentInput = "file";
+    });
+  }
+
+  // ---------- PLAY BUTTON ----------
 
   playbtn.addEventListener("click", () => {
     if (!audioContext) {
       audioContext = new AudioContext();
-
-      source = audioContext.createMediaElementSource(audio);
       analyser = audioContext.createAnalyser();
-
       analyser.fftSize = 128;
-      const bufferLength = analyser.frequencyBinCount;
 
+      const bufferLength = analyser.frequencyBinCount;
       dataArray = new Uint8Array(bufferLength);
       smoothData = new Float32Array(bufferLength);
-
-      source.connect(analyser);
-      analyser.connect(audioContext.destination);
     }
 
     if (audioContext.state === "suspended") {
       audioContext.resume();
     }
 
-    // if mic was running, disconnect it
+    // If mic was active, disconnect it
     if (micSource) {
       micSource.disconnect();
-      source.connect(analyser);
+      micSource = null;
     }
 
+    // If no source yet, create media source
+    if (!source) {
+      source = audioContext.createMediaElementSource(audio);
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
+    }
+
+    currentInput = "file";
     audio.play();
 
     if (!isPlaying) {
@@ -65,17 +113,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // ---------- PAUSE ----------
+
   pausebtn.addEventListener("click", () => {
     audio.pause();
     isPlaying = false;
   });
 
-  // 🎤 MIC BUTTON
+  // ---------- MIC BUTTON ----------
+
   micbtn.addEventListener("click", async () => {
     if (!audioContext) {
       audioContext = new AudioContext();
       analyser = audioContext.createAnalyser();
-      analyser.fftSize = 128;
+      analyser.fftSize = 1024;
 
       const bufferLength = analyser.frequencyBinCount;
       dataArray = new Uint8Array(bufferLength);
@@ -86,29 +137,33 @@ document.addEventListener("DOMContentLoaded", () => {
       audioContext.resume();
     }
 
+    // Stop file audio
     audio.pause();
 
+    // Disconnect file source
+    if (source) {
+      source.disconnect();
+      source = null;
+    }
+
+    // Disconnect analyser from speakers (avoid echo)
+    try {
+      analyser.disconnect();
+    } catch (e) {}
+
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-micSource = audioContext.createMediaStreamSource(stream);
+    micSource = audioContext.createMediaStreamSource(stream);
 
-// disconnect file source
-if (source) {
-  source.disconnect();
-}
-
-// IMPORTANT: disconnect analyser from speakers
-try {
-  analyser.disconnect();
-} catch (e) {}
-
-// connect mic ONLY to analyser (no speakers)
-micSource.connect(analyser);
+    micSource.connect(analyser);
+    currentInput = "mic";
 
     if (!isPlaying) {
       isPlaying = true;
       draw();
     }
   });
+
+  // ---------- DRAW LOOP ----------
 
   function draw() {
     if (!isPlaying || !analyser) return;
@@ -117,27 +172,15 @@ micSource.connect(analyser);
 
     analyser.getByteTimeDomainData(dataArray);
 
-    // --- AUTO GAIN ---
-    let maxDev = 0;
-    for (let i = 0; i < smoothData.length; i++) {
-      const v = smoothData[i] / 128 - 1;
-      const d = Math.abs(v);
-      if (d > maxDev) maxDev = d;
-    }
-
-    const target = 0.4;
-    let autoGain = target / (maxDev + 0.0001);
-    autoGain = Math.max(0.7, Math.min(autoGain, 2.0));
-
-    if (normalizerOn) {
-      smoothGain += (autoGain - smoothGain) * 0.1; // auto mode
+    // RAW / SMOOTH
+    if (currentMode === "smooth") {
+      for (let i = 0; i < dataArray.length; i++) {
+        smoothData[i] += (dataArray[i] - smoothData[i]) * 0.6;
+      }
     } else {
-      smoothGain = 1; // fixed scale mode
-    }
-
-    // smoothing
-    for (let i = 0; i < dataArray.length; i++) {
-      smoothData[i] += (dataArray[i] - smoothData[i]) * 0.1;
+      for (let i = 0; i < dataArray.length; i++) {
+        smoothData[i] = dataArray[i];
+      }
     }
 
     // motion blur clear
@@ -145,11 +188,27 @@ micSource.connect(analyser);
     ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // ---------- AUTO COLOR ----------
+    let drawColor = waveColor;
+
+    if (autoColor) {
+      let bass = 0;
+      const bassCount = Math.floor(smoothData.length * 0.15);
+
+      for (let i = 0; i < bassCount; i++) {
+        bass += smoothData[i];
+      }
+      bass /= bassCount;
+
+      const hue = (bass / 255) * 360;
+      drawColor = `hsl(${hue}, 100%, 60%)`;
+    }
+
     // waveform style
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = "#36fffd";
-    ctx.shadowBlur = 30;
-    ctx.shadowColor = "#00ffcc";
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = drawColor;
+    ctx.shadowBlur = glowIntensity;
+    ctx.shadowColor = drawColor;
 
     const points = [];
     const sliceWidth = canvas.width / smoothData.length;
@@ -157,8 +216,8 @@ micSource.connect(analyser);
     for (let i = 0; i < smoothData.length; i++) {
       const v = smoothData[i] / 128;
       const centerY = canvas.height / 2;
-      const amplitude = 2; // your manual control
-      const y = centerY + (v - 1) * centerY * amplitude * smoothGain;
+      const amplitude = 2.5;
+      const y = centerY + (v - 1) * centerY * amplitude;
       const x = i * sliceWidth;
       points.push({ x, y });
     }

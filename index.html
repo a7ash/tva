@@ -11,103 +11,172 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 110vh;
+      height: 100vh;
       font-family: sans; 
+      overflow: hidden; /* no scrolling */
     }
 
     canvas {
       border: 5px dotted #333;
     }
 
-    #playbtn  {
+    #playbtn, #pausebtn, #startmic {
       margin-top: 20px;
       padding: 10px 20px;
       font-size: 16px;
       cursor: pointer;
       border: 2px solid grey;
       border-radius: 8px;
+      background: transparent;
+      color: whitesmoke;
     }
 
-    #pausebtn {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 16px;
+    /* ---------- SWITCH STYLE ---------- */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
       cursor: pointer;
-      border: 2px solid grey;
-      border-radius: 8px;
-
+      inset: 0;
+      background-color: #444;
+      transition: 0.3s;
+      border-radius: 34px;
     }
 
-    #startmic {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-      border: 2px solid grey;
-      border-radius: 8px;
-
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 28px;
+      width: 28px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
     }
 
- .switch {
-  position: relative;
-  display: inline-block;
-  width: 60px;
-  height: 34px;
-}
+    input:checked + .slider {
+      background-color: #888;
+    }
 
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
 
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: #444;
-  transition: 0.3s;
-  border-radius: 32px;
-}
+    /* ---------- LEFT CONTROLS ---------- */
+    #leftControls {
+      position: fixed;
+      left: 20px;
+      top: 80%;
+      transform: translateY(0%);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
 
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 32px;
-  width: 32px;
-  left: 2px;
-  bottom: 1px;
-  background-color: white;
-  transition: 0.3s;
-  border-radius: 50%;
-}
+    /* ---------- RIGHT CONTROLS ---------- */
+    #rightControls {
+      position: fixed;
+      right: 20px;
+      top: 80%;
+      transform: translateY(0%);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      align-items: center;
+    }
 
-input:checked + .slider {
-  background-color: grey;
-}
+    #rightControls span, #leftControls span {
+      font-size: 14px;
+      opacity: 0.8;
+    }
 
-input:checked + .slider:before {
-  transform: translateX(24px);
-}
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
+    .auto-toggle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .auto-toggle .labels {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* style file input a bit */
+    #fileInput {
+      color: whitesmoke;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
 
   <canvas id="waveform" width="1440" height="600"></canvas> 
-  <button id="playbtn">Play </button>
+  <button id="playbtn">Play</button>
   <button id="pausebtn">Pause</button>  
   <button id="startmic">Start Mic</button>
-  <div style="margin-top: 12px; display:flex; align-items:center; gap:10px;">
-    <label class="switch">
-      <input type="checkbox" id="normalizerToggle" checked>
-      <span class="slider"></span>
-    </label>
-    <span>Volume Normalizer</span>
+
+  <!-- LEFT SIDE: Glow + File Picker -->
+  <div id="leftControls">
+    <span>Glow</span>
+    <input type="range" id="glowSlider" min="0" max="100" value="30">
+
+    <!-- ✅ NEW: MP3 file picker -->
+    <span>Load MP3</span>
+    <input type="file" id="fileInput" accept="audio/mpeg,audio/mp3,audio/*">
   </div>
 
-  <audio id="audio" src="audio.mp3"></audio>
+  <!-- RIGHT SIDE CONTROLS -->
+  <div id="rightControls">
+    <!-- Smooth / Raw -->
+    <div class="toggle-row">
+      <span>Smooth</span>
+      <label class="switch">
+        <input type="checkbox" id="modeToggle">
+        <span class="slider"></span>
+      </label>
+      <span>Raw</span>
+    </div>
+
+    <!-- AutoColour Toggle -->
+    <div class="auto-toggle">
+      <div class="labels">
+        <span>Off</span>
+        <label class="switch">
+          <input type="checkbox" id="autoColorToggle">
+          <span class="slider"></span>
+        </label>
+        <span>On</span>
+      </div>
+      <span>AutoColour</span>
+    </div>
+
+    <!-- Color Picker -->
+    <input type="color" id="colorPicker" value="#36fffd">
+  </div>
+
+  <audio id="audio"></audio>
 
   <script src="script.js"></script>
 </body>
-</html> 
+</html>
